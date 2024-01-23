@@ -96,6 +96,7 @@ for i in depthes:
     pred = model.predict(X)
     accs.append((pred == y).mean())
 plt.plot(depthes,accs)
+plt.show()
 # +Планеты кодируются: земля = 0, европа = 1, марс = 2
 # +Назначение кодируем: TRAPPIST-1e = 0, Cancri e = 1, J318.5-22 = 2
 # +vip cryptosleep, Transported : 0, 1
