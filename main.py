@@ -1,6 +1,7 @@
 import pandas as pd
 import numpy as np
-from sklearn.tree import DecisionTreeClassifier, plot_tree
+from sklearn.tree import DecisionTreeClassifier
+from sklearn.ensemble import RandomForestClassifier, GradientBoostingClassifier
 import matplotlib.pyplot as plt
 import seaborn as sb
 
@@ -117,20 +118,30 @@ def k_fold(X, y, k):
 
 depthes = list(range(1,50))
 d_accs = []
-feature_names = df.drop(columns = target).columns
 for d in depthes:
     acclist = []
     for (x_train, y_train), (x_val, y_val) in k_fold(X, y, 10):
-        model = DecisionTreeClassifier(max_depth = d)
+        model = DecisionTreeClassifier(max_depth = d) # оптимальная глубина = 7
         model.fit(x_train, y_train)
         pred = model.predict(x_val)
         acc = np.mean(pred == y_val)
         acclist.append(acc)
-        plot_tree(model, feature_names=feature_names);
     d_accs.append(np.mean(acclist))
 
 plt.plot(depthes,d_accs)
 plt.show()
+
+models = dict(tree=DecisionTreeClassifier(max_depth=7),
+                forest=RandomForestClassifier(),
+                booster=GradientBoostingClassifier())
+for name, model in models.items():
+    accs = []
+    for (x_train, y_train), (x_val, y_val) in k_fold(X, y, 10):
+        model.fit(x_train, y_train)
+        pred = model.predict(x_val)
+        accs.append(np.mean(pred == y_val) * 100)
+    print(f'Для модели {name} среднняя accuracy = {np.mean(accs):.2f}%')
+
 # +Планеты кодируются: земля = 0, европа = 1, марс = 2
 # +Назначение кодируем: TRAPPIST-1e = 0, Cancri e = 1, J318.5-22 = 2
 # +vip cryptosleep, Transported : 0, 1
