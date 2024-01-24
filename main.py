@@ -3,7 +3,6 @@ import numpy as np
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.ensemble import RandomForestClassifier, GradientBoostingClassifier
 import matplotlib.pyplot as plt
-import seaborn as sb
 
 df = pd.read_csv("train_cpy.csv")
 
