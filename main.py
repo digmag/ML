@@ -19,7 +19,6 @@ def format(name):
 
     df['CryoSleep'] = df['CryoSleep'].fillna(
         (df[['RoomService', 'FoodCourt', 'ShoppingMall', 'Spa', 'VRDeck']] != 0.0).any(axis=1))
-
     df = df.dropna(subset=["Age"])
     df = df.dropna(subset=["Cabin"])
     df = df.dropna(subset=["VIP"])
@@ -84,16 +83,6 @@ def format(name):
         mapDestination[i] = listDestination.index(i)
     df.Destination = df.Destination.map(mapDestination)
 
-    df['AllWastes'] = 0.0
-    listWastes = "RoomService FoodCourt ShoppingMall Spa VRDeck".split()
-
-    for index, row in df.iterrows():
-        summ = 0
-        for waste_type in listWastes:
-            summ += row[waste_type]
-    df.at[index, 'AllWastes'] = summ
-
-    df = df.drop(columns=listWastes)
     return df
 
 
@@ -129,7 +118,8 @@ target = "Transported PassengerId".split()
 y = df[target[0]]
 ids = df[target[1]]
 X = df.drop(columns=target).values
-df_test = format("test.csv")
+df_test = pd.read_csv("test.csv")
+
 idstest = df_test[target[1]]
 X_test = df_test.drop(columns=target[1]).values
 '''
@@ -163,7 +153,7 @@ insert_row(["PassengerId","Transported"])
 model = DecisionTreeClassifier(max_depth=7)
 model.fit(X,y)
 for i in range(len(X_test)):
-    pred = model.predict(X_test[i].reshape(1, 9))
+    pred = model.predict(X_test[i].reshape(1, 12))
     insert_row([idstest.iloc[i],[False,True][sum(pred)]])
 
 # +Планеты кодируются: земля = 0, европа = 1, марс = 2
