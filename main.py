@@ -88,14 +88,48 @@ df = df.drop(columns=listWastes)
 target = "Transported"
 y = df[target]
 X = df.drop(columns=target).values
-depthes = list(range(1,21))
-accs=[]
-for i in depthes:
-    model = DecisionTreeClassifier(max_depth=i)
-    model.fit(X, y)
-    pred = model.predict(X)
-    accs.append((pred == y).mean())
-plt.plot(depthes,accs)
+
+def k_fold(X, y, k):
+    N = X.shape[0]
+    n = N // k
+    x_list = []
+    y_list = []
+    for i in range(k):
+        lo = i * n
+        hi = (i + 1) * n
+
+        if i == k - 1:
+            hi = N
+
+        x_list.append(X[lo:hi])
+        y_list.append(y[lo:hi])
+
+    for i in range(k):
+        xl_copy = x_list.copy()
+        yl_copy = y_list.copy()
+        x_val = xl_copy.pop(i)
+        y_val = yl_copy.pop(i)
+        x_train = np.vstack(xl_copy)
+        y_train = np.hstack(yl_copy)
+
+        yield (x_train, y_train), (x_val, y_val)
+    return
+
+depthes = list(range(1,50))
+d_accs = []
+feature_names = df.drop(columns = target).columns
+for d in depthes:
+    acclist = []
+    for (x_train, y_train), (x_val, y_val) in k_fold(X, y, 10):
+        model = DecisionTreeClassifier(max_depth = d)
+        model.fit(x_train, y_train)
+        pred = model.predict(x_val)
+        acc = np.mean(pred == y_val)
+        acclist.append(acc)
+        plot_tree(model, feature_names=feature_names);
+    d_accs.append(np.mean(acclist))
+
+plt.plot(depthes,d_accs)
 plt.show()
 # +Планеты кодируются: земля = 0, европа = 1, марс = 2
 # +Назначение кодируем: TRAPPIST-1e = 0, Cancri e = 1, J318.5-22 = 2
