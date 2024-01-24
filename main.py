@@ -4,90 +4,98 @@ from sklearn.tree import DecisionTreeClassifier
 from sklearn.ensemble import RandomForestClassifier, GradientBoostingClassifier
 import matplotlib.pyplot as plt
 
-df = pd.read_csv("train_cpy.csv")
+import csv
 
-df['HomePlanet'] = df['HomePlanet'].fillna(pd.Series(np.where(df['VIP'] == True, 'Europa', 'Earth'), index=df.index))
+def insert_row(row_data):
+    with open("ansvers.csv", 'a', newline='') as csvfile:
+        csv_writer = csv.writer(csvfile)
+        csv_writer.writerow(row_data)
 
-df['CryoSleep'] = df['CryoSleep'].fillna(
-    (df[['RoomService', 'FoodCourt', 'ShoppingMall', 'Spa', 'VRDeck']] != 0.0).any(axis=1))
 
-df = df.dropna(subset=["Age"])
-df = df.dropna(subset=["Cabin"])
-df = df.dropna(subset=["VIP"])
-df[['Deck', 'Num', 'Side']] = df['Cabin'].str.split('/', expand=True)
+def format(name):
+    df = pd.read_csv(name)
 
-cols = "PassengerId Name Cabin".split()
-df = df.drop(columns=cols)
+    df['HomePlanet'] = df['HomePlanet'].fillna(pd.Series(np.where(df['VIP'] == True, 'Europa', 'Earth'), index=df.index))
 
-df['Destination'] = df['Destination'].fillna('Unknown')
+    df['CryoSleep'] = df['CryoSleep'].fillna(
+        (df[['RoomService', 'FoodCourt', 'ShoppingMall', 'Spa', 'VRDeck']] != 0.0).any(axis=1))
 
-df_VIP = df.loc[((df["VIP"] == True) & (df["CryoSleep"] == False))]
-df_com = df.loc[((df["VIP"] == False) & (df["CryoSleep"] == False))]
+    df = df.dropna(subset=["Age"])
+    df = df.dropna(subset=["Cabin"])
+    df = df.dropna(subset=["VIP"])
+    df[['Deck', 'Num', 'Side']] = df['Cabin'].str.split('/', expand=True)
 
-cols = "RoomService FoodCourt ShoppingMall Spa VRDeck".split()
-for c in cols:
-    mean_com = df_com[c].mean()
-    mean_VIP = df_VIP[c].mean()
-    df[c] = df.apply(
-        lambda row: 0 if row['CryoSleep'] else (mean_com if ~row['VIP'] else mean_VIP) if pd.isnull(row[c]) else row[c],
-        axis=1)
+    cols = "Name Cabin".split()
+    df = df.drop(columns=cols)
 
-decks = sorted(df.Deck.unique())
-mapdictdeck = dict()
-for i in decks:
-    mapdictdeck[i] = decks.index(i)
-df.Deck = df.Deck.map(mapdictdeck)
+    df['Destination'] = df['Destination'].fillna('Unknown')
 
-sides = sorted(df.Side.unique())
-mapdictside = dict()
-for i in sides:
-    mapdictside[i] = sides.index(i)
-df.Side = df.Side.map(mapdictside)
+    df_VIP = df.loc[((df["VIP"] == True) & (df["CryoSleep"] == False))]
+    df_com = df.loc[((df["VIP"] == False) & (df["CryoSleep"] == False))]
 
-listVip = [False, True]
-mapVip = dict()
-for i in listVip:
-    mapVip[i] = listVip.index(i)
-df.VIP = df.VIP.map(mapVip)
+    cols = "RoomService FoodCourt ShoppingMall Spa VRDeck".split()
+    for c in cols:
+        mean_com = df_com[c].mean()
+        mean_VIP = df_VIP[c].mean()
+        df[c] = df.apply(
+            lambda row: 0 if row['CryoSleep'] else (mean_com if ~row['VIP'] else mean_VIP) if pd.isnull(row[c]) else row[c],
+            axis=1)
 
-listCryoSleep = [False, True]
-mapCryoSleep = dict()
-for i in listCryoSleep:
-    mapCryoSleep[i] = listCryoSleep.index(i)
-df.CryoSleep = df.CryoSleep.map(mapCryoSleep)
+    decks = sorted(df.Deck.unique())
+    mapdictdeck = dict()
+    for i in decks:
+        mapdictdeck[i] = decks.index(i)
+    df.Deck = df.Deck.map(mapdictdeck)
 
-listTransported = [False, True]
-mapTransported = dict()
-for i in listTransported:
-    mapTransported[i] = listTransported.index(i)
-df.Transported = df.Transported.map(mapTransported)
+    sides = sorted(df.Side.unique())
+    mapdictside = dict()
+    for i in sides:
+        mapdictside[i] = sides.index(i)
+    df.Side = df.Side.map(mapdictside)
 
-listHomePlanet = "Earth Europa Mars".split()
-mapHomePlanet = dict()
-for i in listHomePlanet:
-    mapHomePlanet[i] = listHomePlanet.index(i)
-df.HomePlanet = df.HomePlanet.map(mapHomePlanet)
+    listVip = [False, True]
+    mapVip = dict()
+    for i in listVip:
+        mapVip[i] = listVip.index(i)
+    df.VIP = df.VIP.map(mapVip)
 
-listDestination = "TRAPPIST-1e,55 Cancri e,PSO J318.5-22,Unknown".split(",")
-mapDestination = dict()
-for i in listDestination:
-    mapDestination[i] = listDestination.index(i)
-df.Destination = df.Destination.map(mapDestination)
+    listCryoSleep = [False, True]
+    mapCryoSleep = dict()
+    for i in listCryoSleep:
+        mapCryoSleep[i] = listCryoSleep.index(i)
+    df.CryoSleep = df.CryoSleep.map(mapCryoSleep)
 
-df['AllWastes'] = 0.0
-listWastes = "RoomService FoodCourt ShoppingMall Spa VRDeck".split()
+    if(name != "test.csv"):
+        listTransported = [False, True]
+        mapTransported = dict()
+        for i in listTransported:
+            mapTransported[i] = listTransported.index(i)
+        df.Transported = df.Transported.map(mapTransported)
 
-for index, row in df.iterrows():
-    summ = 0
-    for waste_type in listWastes:
-        summ += row[waste_type]
-df.at[index, 'AllWastes'] = summ
+    listHomePlanet = "Earth Europa Mars".split()
+    mapHomePlanet = dict()
+    for i in listHomePlanet:
+        mapHomePlanet[i] = listHomePlanet.index(i)
+    df.HomePlanet = df.HomePlanet.map(mapHomePlanet)
 
-df = df.drop(columns=listWastes)
+    listDestination = "TRAPPIST-1e,55 Cancri e,PSO J318.5-22,Unknown".split(",")
+    mapDestination = dict()
+    for i in listDestination:
+        mapDestination[i] = listDestination.index(i)
+    df.Destination = df.Destination.map(mapDestination)
 
-target = "Transported"
-y = df[target]
-X = df.drop(columns=target).values
+    df['AllWastes'] = 0.0
+    listWastes = "RoomService FoodCourt ShoppingMall Spa VRDeck".split()
+
+    for index, row in df.iterrows():
+        summ = 0
+        for waste_type in listWastes:
+            summ += row[waste_type]
+    df.at[index, 'AllWastes'] = summ
+
+    df = df.drop(columns=listWastes)
+    return df
+
 
 def k_fold(X, y, k):
     N = X.shape[0]
@@ -115,6 +123,16 @@ def k_fold(X, y, k):
         yield (x_train, y_train), (x_val, y_val)
     return
 
+
+df = format("train.csv")
+target = "Transported PassengerId".split()
+y = df[target[0]]
+ids = df[target[1]]
+X = df.drop(columns=target).values
+df_test = format("test.csv")
+idstest = df_test[target[1]]
+X_test = df_test.drop(columns=target[1]).values
+'''
 depthes = list(range(1,50))
 d_accs = []
 for d in depthes:
@@ -140,6 +158,13 @@ for name, model in models.items():
         pred = model.predict(x_val)
         accs.append(np.mean(pred == y_val) * 100)
     print(f'Для модели {name} среднняя accuracy = {np.mean(accs):.2f}%')
+'''
+insert_row(["PassengerId","Transported"])
+model = DecisionTreeClassifier(max_depth=7)
+model.fit(X,y)
+for i in range(len(X_test)):
+    pred = model.predict(X_test[i].reshape(1, 9))
+    insert_row([idstest.iloc[i],[False,True][sum(pred)]])
 
 # +Планеты кодируются: земля = 0, европа = 1, марс = 2
 # +Назначение кодируем: TRAPPIST-1e = 0, Cancri e = 1, J318.5-22 = 2
