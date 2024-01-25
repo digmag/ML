@@ -1,7 +1,7 @@
 import pandas as pd
 import numpy as np
 from sklearn.tree import DecisionTreeClassifier
-from sklearn.ensemble import RandomForestClassifier, GradientBoostingClassifier
+from sklearn.ensemble import RandomForestClassifier, GradientBoostingClassifier, HistGradientBoostingClassifier
 import matplotlib.pyplot as plt
 
 import csv
@@ -85,6 +85,78 @@ def format(name):
 
     return df
 
+def formattest(name):
+    df = pd.read_csv(name)
+
+    df['HomePlanet'] = df['HomePlanet'].fillna(pd.Series(np.where(df['VIP'] == True, 'Europa', 'Earth'), index=df.index))
+
+    df['CryoSleep'] = df['CryoSleep'].fillna(
+        (df[['RoomService', 'FoodCourt', 'ShoppingMall', 'Spa', 'VRDeck']] != 0.0).any(axis=1))
+    df[['Deck', 'Num', 'Side']] = df['Cabin'].str.split('/', expand=True)
+
+    cols = "Name Cabin".split()
+    df = df.drop(columns=cols)
+
+    df['Destination'] = df['Destination'].fillna('Unknown')
+
+    df_VIP = df.loc[((df["VIP"] == True) & (df["CryoSleep"] == False))]
+    df_com = df.loc[((df["VIP"] == False) & (df["CryoSleep"] == False))]
+
+    cols = "RoomService FoodCourt ShoppingMall Spa VRDeck".split()
+    for c in cols:
+        mean_com = df_com[c].mean()
+        mean_VIP = df_VIP[c].mean()
+        df[c] = df.apply(
+            lambda row: 0 if row['CryoSleep'] else (mean_com if not(row['VIP']) else mean_VIP) if pd.isnull(row[c]) else row[c],
+            axis=1)
+
+    df['Deck'] = df['Deck'].fillna('U')
+    decks = sorted(df.Deck.unique())
+    mapdictdeck = dict()
+    for i in decks:
+        mapdictdeck[i] = decks.index(i)
+    df.Deck = df.Deck.map(mapdictdeck)
+
+    df['Side'] = df['Side'].fillna('U')
+    sides = sorted(df.Side.unique())
+    mapdictside = dict()
+    for i in sides:
+        mapdictside[i] = sides.index(i)
+    df.Side = df.Side.map(mapdictside)
+
+    listVip = [False, True]
+    mapVip = dict()
+    for i in listVip:
+        mapVip[i] = listVip.index(i)
+    df.VIP = df.VIP.map(mapVip)
+
+    listCryoSleep = [False, True]
+    mapCryoSleep = dict()
+    for i in listCryoSleep:
+        mapCryoSleep[i] = listCryoSleep.index(i)
+    df.CryoSleep = df.CryoSleep.map(mapCryoSleep)
+
+    if(name != "test.csv"):
+        listTransported = [False, True]
+        mapTransported = dict()
+        for i in listTransported:
+            mapTransported[i] = listTransported.index(i)
+        df.Transported = df.Transported.map(mapTransported)
+
+    listHomePlanet = "Earth Europa Mars".split()
+    mapHomePlanet = dict()
+    for i in listHomePlanet:
+        mapHomePlanet[i] = listHomePlanet.index(i)
+    df.HomePlanet = df.HomePlanet.map(mapHomePlanet)
+
+    listDestination = "TRAPPIST-1e,55 Cancri e,PSO J318.5-22,Unknown".split(",")
+    mapDestination = dict()
+    for i in listDestination:
+        mapDestination[i] = listDestination.index(i)
+    df.Destination = df.Destination.map(mapDestination)
+
+    return df
+
 
 def k_fold(X, y, k):
     N = X.shape[0]
@@ -118,7 +190,7 @@ target = "Transported PassengerId".split()
 y = df[target[0]]
 ids = df[target[1]]
 X = df.drop(columns=target).values
-df_test = pd.read_csv("test.csv")
+df_test = formattest("test.csv")
 
 idstest = df_test[target[1]]
 X_test = df_test.drop(columns=target[1]).values
@@ -150,10 +222,10 @@ for name, model in models.items():
     print(f'Для модели {name} среднняя accuracy = {np.mean(accs):.2f}%')
 '''
 insert_row(["PassengerId","Transported"])
-model = DecisionTreeClassifier(max_depth=7)
+model = HistGradientBoostingClassifier()
 model.fit(X,y)
 for i in range(len(X_test)):
-    pred = model.predict(X_test[i].reshape(1, 12))
+    pred = model.predict(X_test[i].reshape(1, 13))
     insert_row([idstest.iloc[i],[False,True][sum(pred)]])
 
 # +Планеты кодируются: земля = 0, европа = 1, марс = 2
